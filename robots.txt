@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://al-jazeera-omran.github.io/OMRAN-ALJAZEERA-COMPANY/sitemap.xml
