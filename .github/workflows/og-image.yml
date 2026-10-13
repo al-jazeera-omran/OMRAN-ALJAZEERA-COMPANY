@@ -1,0 +1,31 @@
+name: Render link preview image
+on:
+  push:
+    paths: ["og/**", ".github/workflows/og-image.yml"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install fonts
+        run: |
+          mkdir -p ~/.fonts
+          curl -fsSL -o ~/.fonts/Cairo.ttf "https://github.com/google/fonts/raw/main/ofl/cairo/Cairo%5Bslnt,wght%5D.ttf"
+          curl -fsSL -o ~/.fonts/Montserrat.ttf "https://github.com/google/fonts/raw/main/ofl/montserrat/Montserrat%5Bwght%5D.ttf"
+          fc-cache -f
+          fc-list | grep -Ei "cairo|montserrat"
+      - name: Render
+        run: |
+          google-chrome --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=1 \
+            --window-size=1200,630 --virtual-time-budget=3000 \
+            --screenshot="$PWD/img/og.png" "file://$PWD/og/og.html"
+          ls -la img/og.png
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add img/og.png
+          git diff --cached --quiet || (git commit -m "Render link preview image" && git push)
