@@ -245,4 +245,8 @@ window.buildWallPro=function(s){
     if(k==='wall'&&window.buildWallPro){window.buildWallPro(s);return}
     var e=EXT[k];if(e&&window[e[0]]){window[e[0]](s);return}
     s.pitch=0.5;f(s,k);if(e)load(k,function(){if(s._kind===k&&window[e[0]]){window[e[0]](s);s.draw()}})}}})}catch(e){}
+  // hero scene: show original instantly, swap to the detailed scene once js/hero-pro.js is loaded
+  var _bh;try{Object.defineProperty(window,'buildHero',{configurable:true,get:function(){return _bh},
+    set:function(f){_bh=function(s){if(window.buildHeroPro){window.buildHeroPro(s);return}f(s);
+      var t=document.createElement('script');t.src='js/hero-pro.js?v=1';t.onload=function(){if(window.buildHeroPro){window.buildHeroPro(s);s.draw()}};document.head.appendChild(t)}}})}catch(e){}
   window.addEventListener('load',function(){setTimeout(function(){for(var k in EXT)load(k,function(){})},600)});})();
