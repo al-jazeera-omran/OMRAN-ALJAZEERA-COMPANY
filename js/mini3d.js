@@ -236,12 +236,13 @@ window.buildWallPro=function(s){
 };
 })();
 
-/* site hook: route 'wall' and 'fire' models to the detailed scenes; fire scene loads on demand */
-(function(){var _bm;
-  function loadFire(cb){if(window.buildFirePro)return cb();var t=document.createElement('script');t.src='js/fire-pro.js?v=1';t.onload=cb;document.head.appendChild(t)}
+/* site hook: route models to detailed scenes; extra scenes load on demand (missing file -> original model) */
+(function(){var _bm,EXT={fire:['buildFirePro','js/fire-pro.js?v=1'],mep:['buildMepPro','js/mep-pro.js?v=1'],struct:['buildStructPro','js/struct-pro.js?v=1']},st={};
+  function load(k,cb){var e=EXT[k];if(!e)return;if(window[e[0]])return cb();if(st[k]==='fail')return;(st[k+'_q']=st[k+'_q']||[]).push(cb);if(st[k])return;st[k]='loading';
+    var t=document.createElement('script');t.src=e[1];t.onload=function(){st[k]='ok';(st[k+'_q']||[]).forEach(function(f){f()})};t.onerror=function(){st[k]='fail'};document.head.appendChild(t)}
   try{Object.defineProperty(window,'buildModel',{configurable:true,get:function(){return _bm},
   set:function(f){_bm=function(s,k){s._kind=k;
     if(k==='wall'&&window.buildWallPro){window.buildWallPro(s);return}
-    if(k==='fire'){if(window.buildFirePro){window.buildFirePro(s);return}f(s,k);loadFire(function(){if(s._kind==='fire'){window.buildFirePro(s);s.draw()}});return}
-    s.pitch=0.5;return f(s,k)}}})}catch(e){}
-  if(document.readyState!=='complete')window.addEventListener('load',function(){setTimeout(function(){loadFire(function(){})},500)});})();
+    var e=EXT[k];if(e&&window[e[0]]){window[e[0]](s);return}
+    s.pitch=0.5;f(s,k);if(e)load(k,function(){if(s._kind===k&&window[e[0]]){window[e[0]](s);s.draw()}})}}})}catch(e){}
+  window.addEventListener('load',function(){setTimeout(function(){for(var k in EXT)load(k,function(){})},600)});})();
