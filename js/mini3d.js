@@ -95,7 +95,7 @@ Scene.prototype.draw=function(){
     var dd=n[0]*L[0]+n[1]*L[1]+n[2]*L[2],dl=fc.ds?Math.abs(dd):Math.max(0,dd),sh=fc.flat?1:0.6+0.42*dl;
     if(fc.txt){out.push({P:P,z:zs+(fc.zb||0),l:fc.l,txt:fc.txt});continue}
     var col='rgba('+Math.min(255,fc.c[0]*sh|0)+','+Math.min(255,fc.c[1]*sh|0)+','+Math.min(255,fc.c[2]*sh|0)+','+fc.a+')';
-    out.push({P:P,z:zs,l:fc.l,col:col})}
+    out.push({P:P,z:zs+(fc.zb||0),l:fc.l,col:col})}
   out.sort(function(a,b){return a.l-b.l||a.z-b.z});
   ctx.lineJoin='round';
   for(i=0;i<out.length;i++){var o=out[i];
@@ -114,7 +114,7 @@ window.Mini3D=Scene;
 /* Walls & finishes — professional scene (metres). Street at -z, plot at +z. */
 (function(){
 var P={
-  ground:'#E4DDCF',asphalt:'#4B5259',asphaltE:'#555C63',lineW:'#F2F3F4',lineY:'#E8C25A',curb:'#E9EBEC',curbD:'#C9CDD1',walk:'#D2D0CB',walkJ:'#BDBAB3',apron:'#C6C3BC',
+  ground:'#E4DDCF',asphalt:'#4B5259',lineW:'#F2F3F4',curb:'#E9EBEC',walk:'#D2D0CB',walkJ:'#BDBAB3',apron:'#C6C3BC',
   plinth:'#B3A082',plinthT:'#C9B898',body:'#F1ECE2',reveal:'#D2C9B9',coping:'#FAF8F4',st1:'#D6C6A7',st2:'#CBB995',cap:'#FAF8F4',
   metal:'#262E35',light:'#FFE3A3',gate:'#22292F',gateBar:'#323B43',
   b1:'#8F979E',b2:'#868E95',plaster:'#C8C4BC',primer:'#FFFFFF',paint:'#E2C796',
@@ -129,13 +129,11 @@ function flat(s,x0,x1,z0,z1,y,col,layer,a){s.poly([[x0,y,z1],[x1,y,z1],[x1,y,z0]
 function hull(pts){pts=pts.slice().sort(function(a,b){return a[0]-b[0]||a[1]-b[1]});function cr(o,a,b){return (a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0])}
   var lo=[],up=[];pts.forEach(function(p){while(lo.length>1&&cr(lo[lo.length-2],lo[lo.length-1],p)<=0)lo.pop();lo.push(p)});
   pts.slice().reverse().forEach(function(p){while(up.length>1&&cr(up[up.length-2],up[up.length-1],p)<=0)up.pop();up.push(p)});return lo.slice(0,-1).concat(up.slice(0,-1))}
-var SH=[0.45/1,-0.55/1]; // shadow offset per metre of height (light dir)
+var SH=[0.45,-0.55];
 function boxShadow(s,x0,x1,z0,z1,h,a){var dx=SH[0]*h,dz=SH[1]*h,c=[[x0,z0],[x1,z0],[x1,z1],[x0,z1]];
   var pts=hull(c.concat(c.map(function(p){return [p[0]+dx,p[1]+dz]})));
   s.poly(pts.map(function(p){return [p[0],0.012,p[1]]}).reverse(),P.shadow,{layer:0.45,a:a,flat:1})}
 function blob(s,x,z,r,h,a){var pts=[],cx=x+SH[0]*h*0.6,cz=z+SH[1]*h*0.6;for(var i=0;i<20;i++){var t=-i/20*Math.PI*2;pts.push([cx+Math.cos(t)*r*1.25,0.013,cz+Math.sin(t)*r])}s.poly(pts,P.shadow,{layer:0.46,a:a,flat:1})}
-
-/* ---- vegetation ---- */
 function tree(s,x,z,sc){sc=sc||1;var h=2.2*sc;
   s.cyl(x,0,z,0.12*sc,h,'y',P.trunk,{n:14});
   s.sphere(x,h+0.5*sc,z,1.15*sc,0.95*sc,1.15*sc,P.leaf2,{n:18,m:12,jit:0.035});
@@ -144,8 +142,6 @@ function tree(s,x,z,sc){sc=sc||1;var h=2.2*sc;
   blob(s,x,z,1.15*sc,h+0.6*sc,0.13)}
 function bush(s,x,z,r,col){s.sphere(x,r*0.55,z,r,r*0.8,r,col||P.shrub,{n:16,m:10,jit:0.04,half:1})}
 function hedgeRow(s,x0,x1,z,r){for(var x=x0;x<=x1+0.01;x+=r*1.3)bush(s,x,z,r,(Math.round(x*3)%2)?P.shrub:P.leaf1)}
-
-/* ---- street ---- */
 function street(s,Z){
   var sw0=Z-0.05,sw1=Z-1.75,c0=sw1,c1=sw1-0.18,r0=c1,r1=r0-5.2,fc0=r1,fc1=r1-0.18;
   flat(s,-12,12,-14,9,-0.001,P.ground,0.1);
@@ -159,13 +155,11 @@ function street(s,Z){
 }
 function streetLamp(s,x,z){s.cyl(x,0.15,z,0.07,5.2,'y','#5B646C',{n:10});s.box(x,5.25,z-0.55,0.08,0.08,1.1,'#5B646C');
   s.box(x,5.12,z-1.05,0.24,0.14,0.42,'#3A4249');s.box(x,5.08,z-1.05,0.18,0.04,0.34,P.light)}
-
-/* ---- scene ---- */
 window.buildWallPro=function(s){
   s.clear();
   var Z=-4.2,XL=-6,XR=6,ZB=4.6,T=0.25,H=2.0;
   street(s,Z);
-  var VG0=-3.9,VG1=-0.3,PG0=0.45,PG1=1.45; // vehicle gate & pedestrian gate openings
+  var VG0=-3.9,VG1=-0.3,PG0=0.45,PG1=1.45;
   function stdWall(a,b,dir,c){
     function pc(y0,y1,t,col){dir==='x'?bx(s,a,b,y0,y1,c-t/2,c+t/2,col):bx(s,c-t/2,c+t/2,y0,y1,a,b,col)}
     pc(0,0.5,T+0.1,P.plinth);pc(0.5,0.55,T+0.12,P.plinthT);pc(0.55,1.1,T,P.body);pc(1.1,1.14,T-0.05,P.reveal);
@@ -175,7 +169,6 @@ window.buildWallPro=function(s){
   function lamp(x,y,z){s.box(x,y,z,0.18,0.05,0.18,P.metal);s.cyl(x,y+0.05,z,0.07,0.2,'y',P.light,{n:10});s.box(x,y+0.25,z,0.22,0.05,0.22,P.metal)}
   stdWall(XL,VG0-0.35,'x',Z);post(XL,Z,0.5,2.3);post((XL+VG0-0.35)/2,Z,0.5,2.3);
   stdWall(VG1+0.35,PG0-0.25,'x',Z);
-  // finishing-layers showcase (outer face -z): paint | primer | plaster | block
   var RX0=PG1+0.25,RX1=XR,L=RX1-RX0,e1=RX0+L*0.76,e2=RX0+L*0.52,e3=RX0+L*0.28,bz=Z+T/2;
   function slab(a,b,ext,col){bx(s,a,b,0,H,Z-T/2-ext,bz,col,{tile:0.5})}
   slab(RX0,e3,0.09,P.paint);slab(e3,e2,0.06,P.primer);slab(e2,e1,0.035,P.plaster);
@@ -187,7 +180,6 @@ window.buildWallPro=function(s){
   stdWall(XL,XR,'x',ZB);
   [VG0-0.35,VG1+0.35,PG1+0.25].forEach(function(x,i){var w=i<2?0.7:0.5;post(x,Z,w,2.6);lamp(x,2.73,Z)});
   post(PG0-0.25,Z,0.5,2.6);lamp(PG0-0.25,2.73,Z);
-  // name plaque on gate pillar
   var px=VG1+0.35;s.box(px,1.05,Z-0.36,0.62,0.9,0.03,'#F4F1EA');
   s.text(px,1.55,Z-0.38,0.56,0.24,'-z',NAME_AR,P.ink,{font:'"Readex Pro",Tajawal,Tahoma,sans-serif'});
   s.text(px,1.3,Z-0.38,0.56,0.12,'-z','عمران الجزيرة',P.ink,{w:600});
@@ -199,8 +191,6 @@ window.buildWallPro=function(s){
   bx(s,VG0-0.6,VG1+0.6,0,0.04,Z-0.04,Z+0.04,'#7D868E');
   frameGate(PG0,PG1,2.1);
   flat(s,VG0-0.3,VG1+0.3,Z-1.75,Z-0.05,0.153,P.apron,0.55);
-
-  /* yard */
   var YZ0=Z+T/2,YZ1=ZB-T/2,YX0=XL+T/2,YX1=XR-T/2;
   flat(s,YX0,YX1,YZ0,YZ1,0.005,P.lawn,0.3);
   for(var lx=YX0;lx<YX1;lx+=1.2)flat(s,lx,Math.min(lx+0.6,YX1),YZ0,YZ1,0.006,P.lawn2,0.31);
@@ -208,8 +198,6 @@ window.buildWallPro=function(s){
   flat(s,PG0+0.05,PG1-0.05,YZ0,0.9,0.01,P.pave,0.35);
   for(var k=YZ0+0.5;k<0.9;k+=0.5)flat(s,PG0+0.05,PG1-0.05,k-0.015,k+0.015,0.012,P.paveD,0.36);
   flat(s,-3.9,3.9,0.5,0.95,0.011,P.pave,0.35);
-
-  /* building: 2-storey HQ */
   var X0=-3.6,X1=3.6,F=0.95,B=4.0,G=3.4,TOP=6.7;
   boxShadow(s,X0,X1,F,B,TOP+0.7,0.12);
   bx(s,X0,X1,0,0.45,F-0.05,B,P.bStone2,{tile:1});
@@ -237,8 +225,6 @@ window.buildWallPro=function(s){
   bx(s,X0-0.12,X1+0.12,TOP+0.85,TOP+0.92,F-0.12,B+0.12,'#E3E5E7',{tile:1});bx(s,X0-0.12,X1+0.12,TOP+0.8,TOP+0.85,F-0.13,F-0.11,P.band,{tile:1});
   s.text(0,TOP+0.33,F-0.13,5.6,0.5,'-z',NAME_AR,P.ink,{font:'"Readex Pro",Tajawal,Tahoma,sans-serif'});
   s.text(0,TOP+0.1,F-0.13,3.6,0.18,'-z',NAME_EN,'#3A444D',{w:600,dir:'ltr',font:'"IBM Plex Sans",Arial,sans-serif'});
-
-  /* planting */
   hedgeRow(s,X0+0.3,-1.3,F-0.35,0.32);hedgeRow(s,2.3,X1-0.3,F-0.35,0.32);
   hedgeRow(s,YX0+0.4,VG0-0.6,YZ0+0.4,0.35);hedgeRow(s,RX0+0.2,YX1-0.4,YZ0+0.4,0.35);
   tree(s,-5.0,-2.6,1);tree(s,4.9,-1.6,1.05);tree(s,-5.1,2.8,0.9);tree(s,5.0,3.0,0.85);
@@ -246,11 +232,16 @@ window.buildWallPro=function(s){
   bush(s,-1.4,-1.0,0.5,P.leaf3);bush(s,2.2,-0.4,0.45);
   streetLamp(s,-7.8,Z-1.5);streetLamp(s,7.8,Z-1.5);
   tree(s,-9.5,Z-0.95,0.75);tree(s,9.5,Z-0.95,0.75);
-
   s.yaw=2.6;s.pitch=0.42;s.ty=2.5;s.dist=27;
 };
 })();
 
-/* site hook: when scenes.js defines buildModel, route kind 'wall' to buildWallPro */
-(function(){var _bm;try{Object.defineProperty(window,'buildModel',{configurable:true,get:function(){return _bm},
-  set:function(f){_bm=function(s,k){if(k==='wall'&&window.buildWallPro){window.buildWallPro(s);return}s.pitch=0.5;return f(s,k)}}})}catch(e){}})();
+/* site hook: route 'wall' and 'fire' models to the detailed scenes; fire scene loads on demand */
+(function(){var _bm;
+  function loadFire(cb){if(window.buildFirePro)return cb();var t=document.createElement('script');t.src='js/fire-pro.js?v=1';t.onload=cb;document.head.appendChild(t)}
+  try{Object.defineProperty(window,'buildModel',{configurable:true,get:function(){return _bm},
+  set:function(f){_bm=function(s,k){s._kind=k;
+    if(k==='wall'&&window.buildWallPro){window.buildWallPro(s);return}
+    if(k==='fire'){if(window.buildFirePro){window.buildFirePro(s);return}f(s,k);loadFire(function(){if(s._kind==='fire'){window.buildFirePro(s);s.draw()}});return}
+    s.pitch=0.5;return f(s,k)}}})}catch(e){}
+  if(document.readyState!=='complete')window.addEventListener('load',function(){setTimeout(function(){loadFire(function(){})},500)});})();
